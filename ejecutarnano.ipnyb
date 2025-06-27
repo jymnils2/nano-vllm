@@ -1,0 +1,113 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# 🚀 Nano-vLLM + Gradio: Chat Interactivo\n",
+        "Este notebook instala `nano-vllm`, carga un modelo pequeño y crea una interfaz de chat usando Gradio."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "%pip install git+https://github.com/GeeeekExplorer/nano-vllm.git "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "%pip install gradio"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from huggingface_hub import snapshot_download\n",
+        "\n",
+        "# Descargar un modelo pequeño compatible (ejemplo: Qwen1.5-0.5B)\n",
+        "model_name = \"Qwen/Qwen1.5-0.5B\"\n",
+        "local_dir = \"/content/model\"\n",
+        "\n",
+        "snapshot_download(repo_id=model_name, local_dir=local_dir)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from nanovllm import LLM, SamplingParams\n",
+        "\n",
+        "# Cargar el modelo\n",
+        "llm = LLM(model=\"/content/model\", enforce_eager=True, tensor_parallel_size=1)\n",
+        "\n",
+        "# Configurar parámetros de generación\n",
+        "sampling_params = SamplingParams(temperature=0.6, max_tokens=256)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import gradio as gr\n",
+        "\n",
+        "# Función para generar respuestas\n",
+        "def chat(message, chat_history):\n",
+        "    outputs = llm.generate([message], sampling_params)\n",
+        "    response = outputs[0][\"text\"]\n",
+        "    chat_history.append((message, response))\n",
+        "    return chat_history, chat_history\n",
+        "\n",
+        "# Interfaz de chat\n",
+        "with gr.Blocks() as demo:\n",
+        "    chatbot = gr.Chatbot()\n",
+        "    msg = gr.Textbox(label=\"Escribe tu mensaje\")\n",
+        "    clear = gr.Button(\"Limpiar historial\")\n",
+        "\n",
+        "    state = gr.State([])\n",
+        "\n",
+        "    msg.submit(fn=chat, inputs=[msg, state], outputs=[chatbot, state])\n",
+        "    clear.click(fn=lambda: ([], []), inputs=[], outputs=[chatbot, state])\n",
+        "\n",
+        "demo.launch()"
+      ]
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.10.12"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
